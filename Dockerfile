@@ -1,20 +1,21 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
+# 1) System prep
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+# 2) Workdir
 WORKDIR /app
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends curl \
- && rm -rf /var/lib/apt/lists/*
-
+# 3) Install deps first (better cache)
 COPY requirements.txt .
-RUN python -m pip install --upgrade pip \
- && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# 4) Copy app + data
+COPY app.py ./app.py
+COPY data ./data
 
+# 5) Streamlit server settings
 EXPOSE 8501
-
-HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \
-  CMD curl --fail http://localhost:8501/_stcore/health || exit 1
-
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
